@@ -1,0 +1,18 @@
+import common.*;
+import day1.*;
+import java.util.List;
+
+rule "count"
+when
+    $input1: InputLine()
+    $input2: InputLine(lineNumber == $input1.lineNumber + 1, value > $input1.value)
+then
+    insert (new Count());
+end
+
+rule "display_count"
+when
+    $counts: List() from collect( Count() )
+then
+    System.err.println("part1="+$counts.size());
+end

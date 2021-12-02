@@ -1,0 +1,28 @@
+import common.*;
+import day1.*;
+import java.util.List;
+
+rule "create_windows"
+when
+    $input1: InputLine()
+    $input2: InputLine(lineNumber == $input1.lineNumber + 1)
+    $input3: InputLine(lineNumber == $input2.lineNumber + 1)
+then
+    insert (new Window($input1.lineNumber(), $input1.value() + $input2.value() + $input3.value()));
+end
+
+
+rule "count"
+when
+    $input1: Window()
+    $input2: Window(lineNumber == $input1.lineNumber + 1, value > $input1.value)
+then
+    insert (new Count());
+end
+
+rule "display_count"
+when
+    $counts: List() from collect( Count() )
+then
+    System.err.println("part2="+$counts.size());
+end

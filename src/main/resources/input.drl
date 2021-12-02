@@ -1,0 +1,13 @@
+import common.Input;
+import common.InputLine;
+import java.util.List;
+
+rule "extract_lines"
+when
+    Input($value: value)
+then
+    java.util.Iterator<String> iterator = $value.lines().iterator();
+    for (int i = 0; iterator.hasNext(); i++ ){
+        insert(new InputLine(i, Integer.parseInt(iterator.next())));
+    }
+end
