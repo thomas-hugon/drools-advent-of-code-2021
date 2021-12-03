@@ -1,0 +1,56 @@
+import common.*;
+import day2.*;
+import java.util.List;
+
+rule "create_result"
+when
+    not SubmarineStatusPart1()
+then
+    insert(new SubmarineStatusPart1());
+end
+
+rule "parse_line"
+when
+    $input1: InputLine($ln: lineNumber, $val: value, value matches "^(forward|up|down) \\d+$")
+then
+    var splitted = $val.split(" ");
+    insert (new Action($ln, splitted[0], Integer.parseInt(splitted[1])));
+end
+
+rule "inc_forward"
+when
+    $action: Action(name == "forward")
+    $result: SubmarineStatusPart1()
+then
+    $result.forward($action.value());
+    update($result);
+    delete($action);
+end
+
+rule "inc_depth"
+when
+    $action: Action(name == "down")
+    $result: SubmarineStatusPart1()
+then
+    $result.down($action.value());
+    update($result);
+    delete($action);
+end
+
+rule "dec_depth"
+when
+    $action: Action(name == "up")
+    $result: SubmarineStatusPart1()
+then
+    $result.up($action.value());
+    update($result);
+    delete($action);
+end
+
+rule "display_result"
+when
+    not Action()
+    $result: SubmarineStatusPart1()
+then
+    System.err.println("part1="+$result.result());
+end

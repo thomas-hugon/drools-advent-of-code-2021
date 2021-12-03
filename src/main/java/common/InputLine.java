@@ -1,4 +1,4 @@
 package common;
 
-public record InputLine(int lineNumber, int value) {
+public record InputLine(int lineNumber, String value) {
 }

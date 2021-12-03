@@ -2,10 +2,17 @@ import common.*;
 import day1.*;
 import java.util.List;
 
+rule "parse_line"
+when
+    $input1: InputLine($ln: lineNumber, $val: value, value matches "^\\d+$")
+then
+    insert (new Depth($ln, Integer.parseInt($val)));
+end
+
 rule "count"
 when
-    $input1: InputLine()
-    $input2: InputLine(lineNumber == $input1.lineNumber + 1, value > $input1.value)
+    $input1: Depth()
+    $input2: Depth(lineNumber == $input1.lineNumber + 1, value > $input1.value)
 then
     insert (new Count());
 end
