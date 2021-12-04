@@ -6,21 +6,21 @@ rule "create_aggregate"
 when
     not BitsAggregate()
 then
-    insert (new BitsAggregate());
+    insert(new BitsAggregate());
 end
 
 rule "parse_line"
 when
-    $input1: InputLine($val: value)
+    $input1: InputLine( $val: value )
 then
-    insert (new Bits( $val ));
+    insert(new Bits($val));
 end
 
 rule "create_index_for_bits"
 when
     $agg: BitsAggregate()
     $bits: Bits()
-    not Index(bits == $bits)
+    not Index( bits == $bits )
 then
     insert(new Index($bits));
 end
@@ -28,7 +28,7 @@ end
 rule "aggregate_bits_until_all_indexes_reach_length"
 when
     $agg: BitsAggregate()
-    $counter: Index(count < len, $index: count, $bits: bits)
+    $counter: Index( count < len, $index: count, $bits: bits )
 then
     $agg.add($index, $bits.getBits()[$index]);
     $counter.inc();
@@ -38,8 +38,8 @@ end
 rule "compute_power_consumption"
 when
     $agg: BitsAggregate()
-    List($size: size) from collect(Bits())
-    List(size == $size) from collect (Index(count == len))
+    List( $size: size ) from collect( Bits() )
+    List( size == $size ) from collect( Index(count == len) )
 then
     int gamma = Integer.parseInt(new String(java.util.stream.IntStream.of($agg.sum()).map(i -> ((i * 2) / $size) + '0').toArray(), 0, 12), 2);
     int epsilon = 0xFFF ^ gamma;
