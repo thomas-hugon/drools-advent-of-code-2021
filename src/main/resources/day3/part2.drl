@@ -15,41 +15,33 @@ rule "parse_line"
 when
     $input1: InputLine( $val: value )
 then
-    insert(new Bits($val));
-end
-
-rule "create_index_for_bits"
-when
-    $bits: Bits()
-    not Index( bits == $bits )
-then
-    insert(new Index($bits));
+    insert(new IndexedBits($val));
 end
 
 rule "aggregate_current_most_common_bits"
 when
     $agg: MostCommonBits( $mostCommonBits: bits )
-    $counter: Index( bits.bitsAsString str[startsWith] $mostCommonBits, count < len, $index: count, $bits: bits )
-    not Index( bits.bitsAsString str[startsWith] $mostCommonBits, count < $index )
+    $counter: IndexedBits( bitsAsString str[startsWith] $mostCommonBits, currentIndex < len, $index: currentIndex, $bits: bits )
+    not IndexedBits( bitsAsString str[startsWith] $mostCommonBits, currentIndex < $index )
 then
-    $agg.add($index, $bits.getBits()[$index]);
+    $agg.add($index, $bits[$index]);
 end
 
 rule "aggregate_current_least_common_bits"
 when
     $agg: LeastCommonBits( $leastCommonBits: bits )
-    $counter: Index( bits.bitsAsString str[startsWith] $leastCommonBits, count < len, $index: count, $bits: bits )
-    not Index( bits.bitsAsString str[startsWith] $leastCommonBits, count < $index )
+    $counter: IndexedBits( bitsAsString str[startsWith] $leastCommonBits, currentIndex < len, $index: currentIndex, $bits: bits )
+    not IndexedBits( bitsAsString str[startsWith] $leastCommonBits, currentIndex < $index )
 then
-    $agg.add($index, $bits.getBits()[$index]);
+    $agg.add($index, $bits[$index]);
 end
 
 rule "compute_next_most_common_bit_or_1"
 when
     $mostCommonBits: MostCommonBits( $len: bits.length, $bits: bits )
-    forall( $index: Index( bits.bitsAsString str[startsWith] $bits )
-            Index( this == $index, count == $len) )
-    $list: List( $size: size, size > 1 ) from collect ( Bits( bitsAsString str[startsWith] $bits ) )
+    forall( $index: IndexedBits( bitsAsString str[startsWith] $bits )
+            IndexedBits( this == $index, currentIndex == $len) )
+    $list: List( $size: size, size > 1 ) from collect ( IndexedBits( bitsAsString str[startsWith] $bits ) )
 then
     $mostCommonBits.pushr(String.valueOf(((2 * $mostCommonBits.sum()[$len])/$size)));
     update($mostCommonBits);
@@ -58,9 +50,9 @@ end
 rule "compute_next_least_common_bit_or_0"
 when
     $leastCommonBits: LeastCommonBits( $len: bits.length, $bits: bits )
-    forall( $index: Index( bits.bitsAsString str[startsWith] $bits )
-            Index( this == $index, count == $len ) )
-    $list: List($size: size, size > 1) from collect ( Bits( bitsAsString str[startsWith] $bits ) )
+    forall( $index: IndexedBits( bitsAsString str[startsWith] $bits )
+            IndexedBits( this == $index, currentIndex == $len ) )
+    $list: List($size: size, size > 1) from collect ( IndexedBits( bitsAsString str[startsWith] $bits ) )
 then
     $leastCommonBits.pushr(String.valueOf(1^((2 * $leastCommonBits.sum()[$len])/$size)));
     update($leastCommonBits);
@@ -69,7 +61,7 @@ end
 rule "update_counters_for_most_commons_bits"
 when
     $mostCommonBits: MostCommonBits( $len: bits.length, $bits: bits )
-    $counter: Index( bits.bitsAsString str[startsWith] $bits, count == $len - 1 )
+    $counter: IndexedBits( bitsAsString str[startsWith] $bits, currentIndex == $len - 1 )
 then
     $counter.inc();
     update($counter);
@@ -78,7 +70,7 @@ end
 rule "update_counters_for_least_commons_bits"
 when
     LeastCommonBits( $len: bits.length, $bits: bits )
-    $counter: Index( bits.bitsAsString str[startsWith] $bits, count == $len - 1 )
+    $counter: IndexedBits( bitsAsString str[startsWith] $bits, currentIndex == $len - 1 )
 then
     $counter.inc();
     update($counter);
@@ -88,23 +80,23 @@ end
 rule "compute_oxygen_generator_rating"
 when
     $mostCommonBits: MostCommonBits( $len: bits.length, $bits: bits )
-    forall( $index: Index( bits.bitsAsString str[startsWith] $bits )
-            Index( this == $index, count == $len )
+    forall( $index: IndexedBits( bitsAsString str[startsWith] $bits )
+            IndexedBits( this == $index, currentIndex == $len )
         )
-    $list: List($size: size, size == 1) from collect ( Bits( bitsAsString str[startsWith] $bits ) )
+    $list: List($size: size, size == 1) from collect ( IndexedBits( bitsAsString str[startsWith] $bits ) )
 then
-    insert(new OxygenGeneratorRating(((Bits)$list.get(0)).getBitsAsString()));
+    insert(new OxygenGeneratorRating(((IndexedBits)$list.get(0)).getBitsAsString()));
 end
 
 rule "compute_co2_scrubber_rating"
 when
     LeastCommonBits( $len: bits.length, $bits: bits )
-    forall( $index: Index( bits.bitsAsString str[startsWith] $bits )
-            Index( this == $index, count == $len )
+    forall( $index: IndexedBits( bitsAsString str[startsWith] $bits )
+            IndexedBits( this == $index, currentIndex == $len )
         )
-    $list: List( $size: size, size == 1 ) from collect ( Bits( bitsAsString str[startsWith] $bits ) )
+    $list: List( $size: size, size == 1 ) from collect ( IndexedBits( bitsAsString str[startsWith] $bits ) )
 then
-    insert(new Co2ScrubberRating(((Bits)$list.get(0)).getBitsAsString()));
+    insert(new Co2ScrubberRating(((IndexedBits)$list.get(0)).getBitsAsString()));
 end
 
 rule "compute_life_support_rating"
