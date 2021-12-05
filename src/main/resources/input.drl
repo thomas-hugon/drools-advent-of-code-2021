@@ -1,13 +1,37 @@
 import common.Input;
 import common.InputLine;
 import java.util.List;
+import java.util.Iterator;
 
-rule "extract_lines"
+rule "extract_lines_iterator"
 when
     Input($value: value)
 then
-    java.util.Iterator<String> iterator = $value.lines().iterator();
-    for (int i = 0; iterator.hasNext(); i++ ){
-        insert(new InputLine(i, iterator.next()));
-    }
+    insert($value.lines().iterator());
+end
+
+rule "create_first_inputline"
+when
+    not InputLine()
+    $iterator: Iterator( hasNext == true )
+then
+    insert(new InputLine(0, (String)$iterator.next()));
+    update($iterator);
+end
+
+rule "create_other_inputlines"
+when
+    InputLine( $ln: lineNumber )
+    not InputLine( lineNumber > $ln )
+    $iterator: Iterator( hasNext == true )
+then
+    insert(new InputLine($ln + 1, (String)$iterator.next()));
+    update($iterator);
+end
+
+rule "delete_iterator"
+when
+    $iterator: Iterator( hasNext == false )
+then
+    delete($iterator);
 end
