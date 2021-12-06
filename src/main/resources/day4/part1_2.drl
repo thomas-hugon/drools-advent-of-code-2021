@@ -104,22 +104,38 @@ then
     delete($match);
 end
 
-rule "insert_winner"
+rule "insert_first_winner"
 when
+    not Winner()
     CurrentDraw($nb: value)
     $winner: Finisher(drawnNumber == $nb)
     not Finisher(drawnNumber == $nb, score > $winner.score)
 then
-    insert(new Winner($winner.board(), $winner.score()));
+    insert(new Winner($winner.board(), $winner.score(), 0));
+end
+
+rule "insert_next_winners"
+no-loop
+when
+    $lastWinner: Winner()
+    not Winner(rank > $lastWinner.rank)
+    CurrentDraw($nb: value)
+    $winner: Finisher(drawnNumber == $nb)
+    not Finisher(drawnNumber == $nb, score > $winner.score)
+then
+    insert(new Winner($winner.board(), $winner.score(), $lastWinner.rank() + 1));
 end
 
 rule "end_game_when_first_winner_wins"
-no-loop
 when
-    $score: Winner()
-    not Winner(this != $score)
+    not CurrentDraw()
+    $firstWinner: Winner()
+    not Winner(rank < $firstWinner.rank)
+    $lastWinner: Winner()
+    not Winner(rank > $lastWinner.rank)
 then
-    System.err.println("part1="+$score.score());
+    System.err.println("part1="+$firstWinner.score());
+    System.err.println("part2="+$lastWinner.score());
 end
 
 rule "delete_next_draw"
