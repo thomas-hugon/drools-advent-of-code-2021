@@ -1,0 +1,131 @@
+import common.*;
+import day4.*;
+import java.util.List;
+import java.lang.Integer;
+import org.apache.commons.lang3.StringUtils;
+
+rule "insert_line_index"
+when
+    not LineIndex()
+then
+    insert(new LineIndex());
+end
+
+rule "insert_drawn_numbers"
+when
+    $drawnNumbers: InputLine( value contains "," )
+then
+    java.util.Queue<String> numbers = java.util.Arrays.stream($drawnNumbers.value().split("\\s*,\\s*"))
+        .filter(StringUtils::isNotBlank)
+        .map(s -> StringUtils.leftPad(s, 2))
+        .collect(java.util.stream.Collectors.toCollection(java.util.LinkedList::new));
+    insert(new DrawnNumbers(numbers));
+end
+
+rule "insert_boards"
+when
+    $lineIndex: LineIndex($lastBoard: value)
+    $boardLine1: InputLine( value matches "\\s*\\d+\\s+\\d+\\s+\\d+\\s+\\d+\\s+\\d+", lineNumber > $lastBoard, $ln: lineNumber, $l1: value )
+    not InputLine( value matches "\\s*\\d+\\s+\\d+\\s+\\d+\\s+\\d+\\s+\\d+", lineNumber > $lastBoard, lineNumber < $ln )
+    $boardLine2: InputLine( lineNumber == $ln + 1, $l2: value )
+    $boardLine3: InputLine( lineNumber == $ln + 2, $l3: value )
+    $boardLine4: InputLine( lineNumber == $ln + 3, $l4: value )
+    $boardLine5: InputLine( lineNumber == $ln + 4, $l5: value )
+then
+    $lineIndex.setValue($ln + 5);
+    update($lineIndex);
+    insert(new Board(String.join("\n", $l1, $l2, $l3, $l4, $l5)));
+end
+
+rule "insert_next_drawn_number"
+when
+    not CurrentDraw()
+    $numbers: DrawnNumbers(hasNext == true)
+then
+    insert(new CurrentDraw($numbers.next()));
+    update($numbers);
+end
+
+rule "mark_boards_marked_start_of_board"
+when
+    CurrentDraw($nb: value)
+    $board: Board(board str[startsWith] $nb)
+    not Finisher(board == $board)
+then
+    $board.setBoard($board.getBoard().replaceFirst($nb, "XX"));
+    update($board);
+    insert(new Match($board));
+end
+
+rule "mark_boards_marked_start_of_line"
+when
+    CurrentDraw($nb: value)
+    $board: Board(board contains ("\n"+$nb))
+    not Finisher(board == $board)
+then
+    $board.setBoard($board.getBoard().replaceAll("\n"+$nb, "\nXX"));
+    update($board);
+    insert(new Match($board));
+end
+
+rule "mark_boards_marked_others"
+when
+    CurrentDraw($nb: value)
+    $board: Board(board contains (" "+$nb))
+    not Finisher(board == $board)
+then
+    $board.setBoard($board.getBoard().replaceAll(" "+$nb, " XX"));
+    update($board);
+    insert(new Match($board));
+end
+
+rule "delete_non_winners_matches"
+when
+    $match: Match(
+                board.board not contains "XX XX XX XX XX",
+                board.board not matches "[0-9 X\n]*(XX[0-9 X\n][0-9 X\n][0-9 X\n][0-9 X\n][0-9 X\n][0-9 X\n][0-9 X\n][0-9 X\n][0-9 X\n][0-9 X\n][0-9 X\n][0-9 X\n][0-9 X\n]){4}XX[0-9 X\n]*"
+            )
+then
+    delete($match);
+end
+
+rule "insert_finishers"
+when
+    CurrentDraw($nb: value)
+    $match: Match()
+    not(Finisher(board == $match.board))
+then
+    int score = Integer.parseInt($nb.trim()) * java.util.Arrays.stream($match.board().getBoard().split("\\s+"))
+                        .filter(obj -> !obj.equals("XX"))
+                        .mapToInt(Integer::parseInt)
+                        .sum();
+    insert(new Finisher($match.board(), score, $nb));
+    update($match.board())
+    delete($match);
+end
+
+rule "insert_winner"
+when
+    CurrentDraw($nb: value)
+    $winner: Finisher(drawnNumber == $nb)
+    not Finisher(drawnNumber == $nb, score > $winner.score)
+then
+    insert(new Winner($winner.board(), $winner.score()));
+end
+
+rule "end_game_when_first_winner_wins"
+no-loop
+when
+    $score: Winner()
+    not Winner(this != $score)
+then
+    System.err.println("part1="+$score.score());
+end
+
+rule "delete_next_draw"
+when
+    $nbWrapper: CurrentDraw()
+then
+    delete($nbWrapper);
+end
+
