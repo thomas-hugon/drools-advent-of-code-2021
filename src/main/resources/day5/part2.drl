@@ -1,0 +1,79 @@
+import common.*;
+import day5.*;
+import java.util.List;
+import java.lang.Integer;
+import org.apache.commons.lang3.StringUtils;
+
+rule "insert_segment_definitions"
+when
+    InputLine( $val: value )
+then
+    var pattern = java.util.regex.Pattern.compile("(\\d+),(\\d+) -> (\\d+),(\\d)+");
+    var matcher = pattern.matcher($val);
+    if(matcher.matches()){
+        var x1 = Integer.parseInt(matcher.group(1));
+        var y1 = Integer.parseInt(matcher.group(2));
+        var x2 = Integer.parseInt(matcher.group(3));
+        var y2 = Integer.parseInt(matcher.group(4));
+        insert(new Segment(
+            new Point(x1, y1),
+            new Direction(Integer.signum(x2-x1), Integer.signum(y2-y1)),
+            Math.max(Math.abs(x2-x1), Math.abs(y2-y1))
+        ));
+    } else{
+        throw new RuntimeException("error on line "+$val);
+    }
+end
+
+rule "insert_next_point"
+when
+    $segment: Segment(norm > 0)
+then
+    var o = $segment.origin();
+    var d = $segment.direction();
+
+    delete($segment);
+    insert(o);
+    insert(new Segment(
+        new Point(o.x()+d.x(), o.y()+ d.y()),
+        d,
+        $segment.norm() - 1
+    ));
+end
+
+rule "insert_last_point"
+when
+    $segment: Segment(norm < 1)
+then
+    delete($segment);
+    insert($segment.origin());
+end
+
+rule "aggregates_first_point"
+when
+    not Segment()
+    $point: Point($x: x, $y: y)
+    not AggregatedPoint(x == $x, y == $y)
+then
+    insert(new AggregatedPoint($x, $y, 1));
+    delete($point);
+end
+
+rule "aggregates_next_points"
+when
+    not Segment()
+    $point: Point($x: x, $y: y)
+    $agg: AggregatedPoint(x == $x, y == $y)
+then
+    delete($point);
+    delete($agg);
+    insert(new AggregatedPoint($x, $y, $agg.count() + 1));
+end
+
+rule "compute_result"
+when
+    not Point()
+    List($size: size) from collect (AggregatedPoint(count > 1))
+then
+    System.err.println("part2="+$size);
+end
