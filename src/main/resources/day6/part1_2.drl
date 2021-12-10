@@ -1,0 +1,68 @@
+import common.*;
+import day6.*;
+import java.util.List;
+import java.lang.Integer;
+import org.apache.commons.lang3.StringUtils;
+
+rule "insert_initial_states"
+when
+    InputLine( $val: value )
+then
+    for(String fishTimer : $val.split(",")){
+        insert(new FishGroup(0, Integer.parseInt(fishTimer), 1));
+    }
+end
+
+rule "merge_fishes_groups"
+when
+    $fg1: FishGroup()
+    $fg2: FishGroup( this != $fg1, day == $fg1.day, fishTimer == $fg1.fishTimer )
+then
+    delete($fg2);
+    update($fg1.merge($fg2));
+end
+
+rule "fishpool_at_day_79"
+when
+    exists FishGroup(day == 80)
+    not FishGroup( day != 80 )
+    $fishPoolSize: Long() from accumulate(
+        FishGroup( $nbOfFishes: nbOfFishes),
+        sum($nbOfFishes)
+    )
+then
+    System.err.println("part1="+$fishPoolSize);
+end
+
+rule "fishpool_at_day_255"
+when
+    exists FishGroup(day == 256)
+    not FishGroup( day != 256 )
+    $fishPoolSize: Long() from accumulate(
+        FishGroup( $nbOfFishes: nbOfFishes),
+        sum($nbOfFishes)
+    )
+then
+    System.err.println("part2="+$fishPoolSize);
+end
+
+rule "reproduce"
+when
+    $fg1: FishGroup( fishTimer == 0 )
+    not FishGroup( day < $fg1.day )
+then
+    insert(new FishGroup($fg1.day()+1, 8, $fg1.nbOfFishes()));
+end
+
+rule "day_pass"
+when
+    $fg1: FishGroup( day < 256 )
+    not FishGroup( day < $fg1.day )
+then
+    $fg1.decFishTimer();
+    $fg1.incDay();
+    update($fg1);
+end
+
+
+
