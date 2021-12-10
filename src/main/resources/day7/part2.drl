@@ -1,0 +1,75 @@
+import common.*;
+import day7.*;
+import java.util.List;
+import java.lang.Integer;
+import org.apache.commons.lang3.StringUtils;
+
+rule "insert_initial_states"
+when
+    InputLine( $val: value )
+then
+    for(String crab : $val.split(",")){
+        insert(new Crab(Integer.parseInt(crab)));
+    }
+end
+
+rule "evaluation_range"
+when
+    $min: Crab()
+    not Crab(position < $min.position)
+    $max: Crab()
+    not Crab(position > $max.position)
+    not PositionEvaluation()
+then
+    insert(new PositionEvaluation($min.position(), $max.position()));
+end
+
+rule "evaluate_crab_for_current_position"
+when
+    $pe: PositionEvaluation(current <= limit)
+    $crab: Crab()
+then
+    var n = Math.abs($crab.position() - $pe.getCurrent());
+    insert(new CrabEvaluation(n*(n+1)/2));
+end
+
+rule "update_min_fuel"
+when
+    List($size: size) from collect( Crab() )
+    List(size == $size) from collect( CrabEvaluation() )
+    $totalFuel: Integer() from accumulate(
+        CrabEvaluation($fuel: fuel()),
+        sum($fuel)
+    )
+    $pe: PositionEvaluation(current <= limit, fuel > $totalFuel)
+then
+    $pe.setFuel($totalFuel);
+    update($pe);
+end
+
+rule "delete_crab_evaluations"
+when
+    $ce: CrabEvaluation()
+then
+    delete($ce);
+end
+
+rule "update_current_position_evaluation"
+when
+    $pe: PositionEvaluation(current < limit)
+then
+    $pe.setCurrent($pe.getCurrent() + 1);
+    update($pe);
+end
+
+rule "display_result"
+when
+    $pe: PositionEvaluation(current == limit)
+then
+    System.err.println("part2="+$pe.getFuel());
+end
+
+
+
+
+
