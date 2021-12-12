@@ -1,0 +1,56 @@
+import common.*;
+import day8.*;
+import java.util.List;
+import java.lang.Integer;
+import org.apache.commons.lang3.StringUtils;
+
+rule "insert_initial_states"
+when
+    InputLine( $ln: lineNumber, $val: value )
+then
+    int i = 0;
+    for (String value: $val.split(" \\| ")[1].split(" ")){
+        insert(new Output(value, $ln, i++));
+    }
+end
+
+rule "ones"
+when
+    $out: Output( value.length == 2 )
+then
+    insert(new DecodedDigit($out.getLine(), $out.getValue(), 1));
+end
+
+rule "fours"
+when
+    $out: Output( value.length == 4 )
+then
+    insert(new DecodedDigit($out.getLine(), $out.getValue(), 4));
+end
+
+rule "sevens"
+when
+    $out: Output( value.length == 3 )
+then
+    insert(new DecodedDigit($out.getLine(), $out.getValue(), 7));
+end
+
+rule "eights"
+when
+    $out: Output( value.length == 7 )
+then
+    insert(new DecodedDigit($out.getLine(), $out.getValue(), 8));
+end
+
+rule "count"
+when
+    List($nb: size) from collect( DecodedDigit() )
+then
+    System.err.println("part1="+$nb);
+end
+
+
+
+
+
+

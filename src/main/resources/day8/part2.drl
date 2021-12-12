@@ -1,0 +1,131 @@
+import common.*;
+import day8.*;
+import java.util.List;
+import java.lang.Integer;
+import org.apache.commons.lang3.StringUtils;
+
+rule "insert_initial_states"
+when
+    InputLine( $ln: lineNumber, $val: value )
+then
+    for (String value: $val.split(" \\| ")[0].split(" ")){
+        insert(new InputDigit(value, $ln));
+    }
+    int i = 0;
+    for (String value: $val.split(" \\| ")[1].split(" ")){
+        insert(new Output(value, $ln, i++));
+    }
+end
+
+rule "zero"
+when
+    $six: DecodedDigit(number == 6, $line: line)
+    $nine: DecodedDigit(number == 9, line == $line)
+    $in: InputDigit( line == $line, value.length == 6, value != $six.value, value != $nine.value )
+then
+    insert(new DecodedDigit($in.getLine(), $in.getValue(), 0));
+end
+
+rule "ones"
+when
+    $in: InputDigit( value.length == 2 )
+then
+    insert(new DecodedDigit($in.getLine(), $in.getValue(), 1));
+end
+
+rule "two"
+when
+    $three: DecodedDigit(number == 3, $line: line)
+    $five: DecodedDigit(number == 5, line == $line)
+    $in: InputDigit( line == $line, value.length == 5, value != $three.value, value != $five.value )
+then
+    insert(new DecodedDigit($in.getLine(), $in.getValue(), 2));
+end
+
+rule "three"
+when
+    $one: DecodedDigit(number == 1, $line: line)
+    $in: InputDigit( line == $line, value.length == 5 )
+    eval( $in.getSet().containsAll($one.getSet()) )
+then
+    insert(new DecodedDigit($in.getLine(), $in.getValue(), 3));
+end
+
+rule "fours"
+when
+    $in: InputDigit( value.length == 4 )
+then
+    insert(new DecodedDigit($in.getLine(), $in.getValue(), 4));
+end
+
+rule "five"
+when
+    $six: DecodedDigit(number == 6, $line: line)
+    $in: InputDigit( line == $line, value.length == 5 )
+    eval( $six.getSet().containsAll($in.getSet()) )
+then
+    insert(new DecodedDigit($in.getLine(), $in.getValue(), 5));
+end
+
+rule "six"
+when
+    $one: DecodedDigit(number == 1, $line: line)
+    $in: InputDigit( line == $line, value.length == 6 )
+    eval(org.apache.commons.collections4.SetUtils.intersection($in.getSet(), $one.getSet()).size() == 1)
+then
+    insert(new DecodedDigit($in.getLine(), $in.getValue(), 6));
+end
+
+rule "sevens"
+when
+    $in: InputDigit( value.length == 3 )
+then
+    insert(new DecodedDigit($in.getLine(), $in.getValue(), 7));
+end
+
+rule "eights"
+when
+    $in: InputDigit( value.length == 7 )
+then
+    insert(new DecodedDigit($in.getLine(), $in.getValue(), 8));
+end
+
+rule "nine"
+when
+    $four: DecodedDigit(number == 4, $line: line)
+    $in: InputDigit( line == $line, value.length == 6 )
+    eval($in.getSet().containsAll($four.getSet()))
+then
+    insert(new DecodedDigit($in.getLine(), $in.getValue(), 9));
+end
+
+rule "out"
+when
+    $o1: Output(position == 0, $line: line)
+    $o2: Output(position == 1, line == $line)
+    $o3: Output(position == 2, line == $line)
+    $o4: Output(position == 3, line == $line)
+    $nb1: DecodedDigit(line == $line, set == $o1.set)
+    $nb2: DecodedDigit(line == $line, set == $o2.set)
+    $nb3: DecodedDigit(line == $line, set == $o3.set)
+    $nb4: DecodedDigit(line == $line, set == $o4.set)
+then
+    insert(new DecodedOutput($line, $nb1.getNumber() * 1000 + $nb2.getNumber() * 100 + $nb3.getNumber() * 10 + $nb4.getNumber() ));
+end
+
+
+rule "sum"
+when
+    $sum: Integer() from accumulate(
+        DecodedOutput($value: value),
+        sum($value)
+    )
+then
+    System.err.println("part2="+$sum);
+end
+
+
+
+
+
+
