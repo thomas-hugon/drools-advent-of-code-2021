@@ -1,0 +1,162 @@
+import common.*;
+import day10.*;
+import java.util.List;
+import java.lang.Integer;
+import org.apache.commons.lang3.StringUtils
+import java.util.Comparator
+import java.util.stream.Collectors;
+
+rule "insert_initial_states"
+when
+    InputLine( $ln: lineNumber, $val: value )
+then
+    insert(new WorkingLine($ln, $val));
+    insert(new Stack($ln));
+end
+
+rule "opening"
+when
+    $stack: Stack( $ln: lineNumber )
+    $line: WorkingLine( lineNumber == $ln, value str[startsWith] "(" || value str[startsWith] "[" || value str[startsWith] "{" || value str[startsWith] "<" )
+then
+    $stack.getStack().push($line.getValue().substring(0,1));
+    $line.setValue($line.getValue().substring(1));
+    update($stack);
+    update($line);
+end
+
+rule "corrupted_closing_parenthesis"
+when
+    $line: WorkingLine( $ln: lineNumber, value str[startsWith] ")")
+    $stack: Stack( lineNumber == $ln, stack.peek != "(" )
+then
+    delete($stack);
+    delete($line);
+    insert(new CorruptedLine($line.getLineNumber(), $line.getValue().substring(0, 1)));
+end
+
+rule "corrupted_closing_square_bracket"
+when
+    $line: WorkingLine( $ln: lineNumber, value str[startsWith] "]")
+    $stack: Stack( lineNumber == $ln, stack.peek != "[" )
+then
+    delete($stack);
+    delete($line);
+    insert(new CorruptedLine($line.getLineNumber(), $line.getValue().substring(0, 1)));
+end
+
+rule "corrupted_closing_brace"
+when
+    $line: WorkingLine( $ln: lineNumber, value str[startsWith] "}")
+    $stack: Stack( lineNumber == $ln, stack.peek != "{" )
+then
+    delete($stack);
+    delete($line);
+    insert(new CorruptedLine($line.getLineNumber(), $line.getValue().substring(0, 1)));
+end
+
+rule "corrupted_closing_angle_bracket"
+when
+    $line: WorkingLine( $ln: lineNumber, value str[startsWith] ">")
+    $stack: Stack( lineNumber == $ln, stack.peek != "<" )
+then
+    delete($stack);
+    delete($line);
+    insert(new CorruptedLine($line.getLineNumber(), $line.getValue().substring(0, 1)));
+end
+
+rule "incompletes"
+when
+    $line: WorkingLine( $ln: lineNumber, value.isEmpty )
+    $stack: Stack( lineNumber == $ln, !stack.isEmpty )
+then
+    insert(new IncompleteLine($ln));
+    delete($line);
+end
+
+rule "valid_closing"
+salience -10
+when
+    $line: WorkingLine( $ln: lineNumber, value str[startsWith] ")" || value str[startsWith] "]" || value str[startsWith] "}" || value str[startsWith] ">" )
+    $stack: Stack( lineNumber == $ln, !stack.isEmpty )
+then
+    $stack.getStack().pop();
+    $line.setValue($line.getValue().substring(1));
+    update($stack);
+    update($line);
+end
+
+rule "complete_incompletes_parentheses"
+salience -10
+when
+    $line: IncompleteLine( $ln: lineNumber)
+    $stack: Stack( lineNumber == $ln, stack.peek == "(" )
+then
+    $stack.getStack().pop();
+    $line.setScore($line.getScore()*5+1);
+    update($stack);
+    update($line);
+end
+
+rule "complete_incompletes_square_brackets"
+salience -10
+when
+    $line: IncompleteLine( $ln: lineNumber)
+    $stack: Stack( lineNumber == $ln, stack.peek == "[" )
+then
+    $stack.getStack().pop();
+    $line.setScore($line.getScore()*5+2);
+    update($stack);
+    update($line);
+end
+
+rule "complete_incompletes_braces"
+salience -10
+when
+    $line: IncompleteLine( $ln: lineNumber)
+    $stack: Stack( lineNumber == $ln, stack.peek == "{" )
+then
+    $stack.getStack().pop();
+    $line.setScore($line.getScore()*5+3);
+    update($stack);
+    update($line);
+end
+
+rule "complete_incompletes_angle_brackets"
+salience -10
+when
+    $line: IncompleteLine( $ln: lineNumber)
+    $stack: Stack( lineNumber == $ln, stack.peek == "<" )
+then
+    $stack.getStack().pop();
+    $line.setScore($line.getScore()*5L+4L);
+    update($stack);
+    update($line);
+end
+
+
+
+rule "corrupted_lines"
+salience -100
+when
+    List($parentheses: size) from collect( CorruptedLine( wrongClosing == ")" ) )
+    List($sqBrackets: size) from collect( CorruptedLine( wrongClosing == "]" ) )
+    List($braces: size) from collect( CorruptedLine( wrongClosing == "}" ) )
+    List($angBrackets: size) from collect( CorruptedLine( wrongClosing == ">" ) )
+then
+    System.err.println("part1="+(3*$parentheses + 57*$sqBrackets + 1197*$braces + 25137*$angBrackets));
+end
+
+rule "incompletes2"
+salience -100
+when
+    $list: List() from accumulate(
+        IncompleteLine( $score: score ),
+        collectList($score)
+    )
+then
+    List<Integer> list = new java.util.ArrayList<>($list);
+    list.sort(Comparator.naturalOrder());
+    System.err.println("part2=" +list.get(list.size()/2));
+end
+
