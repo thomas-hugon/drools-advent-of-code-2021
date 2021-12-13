@@ -1,0 +1,46 @@
+import common.*;
+import day9.*;
+import java.util.List;
+import java.lang.Integer;
+import org.apache.commons.lang3.StringUtils
+import java.util.Comparator
+import java.util.stream.Collectors;
+
+rule "insert_initial_states"
+when
+    InputLine( $vPos: lineNumber, $val: value )
+then
+    int hPos = 0;
+    Iterable<Integer> iterable = () -> $val.chars().map(c -> c - '0').iterator();
+    for(int value: iterable){
+        insert(new Point(hPos++, $vPos, value));
+    }
+end
+
+rule "local_min"
+when
+    Point( $vPos: vPos, $hPos: hPos, $val: value )
+    not Point( vPos == $vPos - 1, hPos == $hPos, value <= $val )
+    not Point( vPos == $vPos + 1, hPos == $hPos, value <= $val )
+    not Point( vPos == $vPos, hPos == $hPos - 1, value <= $val )
+    not Point( vPos == $vPos, hPos == $hPos + 1, value <= $val )
+then
+    insert(new LocalMin($hPos, $vPos, $val));
+end
+
+rule "risk_level"
+when
+    $totalRiskLevel: Integer() from accumulate(
+        LocalMin($riskLevel: value),
+        sum(($riskLevel + 1))
+    )
+then
+    System.err.println("part1="+$totalRiskLevel);
+end
+
+
+
+
+
+
+

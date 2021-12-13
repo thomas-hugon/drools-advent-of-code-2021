@@ -1,0 +1,110 @@
+import common.*;
+import day9.*;
+import java.util.List;
+import java.lang.Integer;
+import org.apache.commons.lang3.StringUtils
+import java.util.Comparator
+import java.util.stream.Collectors;
+
+rule "insert_initial_states"
+when
+    InputLine( $vPos: lineNumber, $val: value )
+then
+    int hPos = 0;
+    Iterable<Integer> iterable = () -> $val.chars().map(c -> c - '0').iterator();
+    for(int value: iterable){
+        insert(new Point(hPos++, $vPos, value));
+    }
+end
+
+rule "local_min"
+when
+    Point( $vPos: vPos, $hPos: hPos, $val: value )
+    not Point( vPos == $vPos - 1, hPos == $hPos, value <= $val )
+    not Point( vPos == $vPos + 1, hPos == $hPos, value <= $val )
+    not Point( vPos == $vPos, hPos == $hPos - 1, value <= $val )
+    not Point( vPos == $vPos, hPos == $hPos + 1, value <= $val )
+then
+    insert(new LocalMin($hPos, $vPos, $val));
+end
+
+rule "create_basin"
+when
+    $localMin: LocalMin()
+    $point: Point(vPos == $localMin.vPos, hPos == $localMin.hPos )
+then
+    java.util.Set<Point> set = new java.util.HashSet<>();
+    set.add($point);
+    insert(new Basin($localMin, set));
+end
+
+rule "update_basin_up"
+when
+    $basin: Basin($points: points)
+    $point: Point($vPos: vPos, $hPos: hPos) from $points
+    $newPoint: Point( vPos == $vPos - 1, hPos == $hPos, value != 9, this not memberOf $points )
+then
+    $points.add($newPoint);
+    update($basin);
+end
+
+rule "update_basin_down"
+when
+    $basin: Basin($points: points)
+    $point: Point($vPos: vPos, $hPos: hPos) from $points
+    $newPoint: Point( vPos == $vPos + 1, hPos == $hPos, value != 9, this not memberOf $points )
+then
+    $points.add($newPoint);
+    update($basin);
+end
+
+rule "update_basin_left"
+when
+    $basin: Basin($points: points)
+    $point: Point($vPos: vPos, $hPos: hPos) from $points
+    $newPoint: Point( vPos == $vPos, hPos == $hPos - 1, value != 9, this not memberOf $points )
+then
+    $points.add($newPoint);
+    update($basin);
+end
+
+rule "update_basin_right"
+when
+    $basin: Basin($points: points)
+    $point: Point($vPos: vPos, $hPos: hPos) from $points
+    $newPoint: Point( vPos == $vPos, hPos == $hPos + 1, value != 9, this not memberOf $points )
+then
+    $points.add($newPoint);
+    update($basin);
+end
+
+rule "insert_largest_basins_accumulator"
+when
+    not LargestBasins()
+then
+    insert(new LargestBasins(new java.util.ArrayList<>()));
+end
+
+rule "compute_three_largest_basins_size"
+salience -1000
+when
+    $acc: LargestBasins(basins.size < 3)
+    $largestRemainingBasin: Basin( this not memberOf $acc.basins )
+    not Basin( this not memberOf $acc.basins, points.size > $largestRemainingBasin.points.size  )
+then
+    $acc.basins().add($largestRemainingBasin);
+    update($acc);
+end
+
+rule "compute_result"
+when
+    $acc: LargestBasins(basins.size == 3)
+    $basins: List() from accumulate(
+        Basin( $points: points ) from $acc.basins,
+        collectList($points.size())
+    )
+then
+    System.err.println("part2="+ ((Integer)$basins.get(0)) * ((Integer)$basins.get(1)) * ((Integer)$basins.get(2)));
+end
+
+

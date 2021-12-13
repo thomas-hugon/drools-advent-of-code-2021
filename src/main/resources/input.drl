@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Iterator;
 
 rule "extract_lines_iterator"
+salience 999999
 when
     Input($value: value)
 then
@@ -11,6 +12,7 @@ then
 end
 
 rule "create_first_inputline"
+salience 999998
 when
     not InputLine()
     $iterator: Iterator( hasNext == true )
@@ -20,6 +22,7 @@ then
 end
 
 rule "create_other_inputlines"
+salience 999997
 when
     InputLine( $ln: lineNumber )
     not InputLine( lineNumber > $ln )
@@ -30,6 +33,7 @@ then
 end
 
 rule "delete_iterator"
+salience 999996
 when
     $iterator: Iterator( hasNext == false )
 then
