@@ -1,0 +1,70 @@
+import common.*;
+import day12.*;
+import java.util.List;
+import java.lang.Integer;
+import org.apache.commons.lang3.StringUtils
+import java.util.Comparator
+import java.util.stream.Collectors;
+
+rule "insert_caves_network"
+when
+    InputLine( $vPos: lineNumber, $val: value )
+then
+    String[] caves = $val.split("-");
+    Cave a = new Cave(caves[0]);
+    Cave b = new Cave(caves[1]);
+    insert(a);
+    insert(b);
+    insert(new Link(a, b));
+    insert(new Link(b, a));
+end
+
+rule "insert_initial_path"
+when
+    not Path()
+    $c: Cave(startCave == true)
+then
+    insert(new Path(List.of($c)));
+end
+
+rule "update_path_with_small_caves"
+when
+    $path: Path()
+    $from: Cave(this == $path.current, endCave == false)
+    $l: Link(fromCave == $from )
+    $to: Cave(this == $l.toCave, small == true )
+    eval( !$path.getPath().contains($to) )
+then
+    insert($path.appending($to));
+end
+
+rule "update_path_with_big_caves"
+when
+    $path: Path()
+    $from: Cave(this == $path.current, endCave == false)
+    $l: Link(fromCave == $from )
+    $to: Cave(this == $l.toCave, big == true )
+then
+    insert($path.appending($to));
+end
+
+rule "update_path_with_end_caves"
+when
+    $path: Path()
+    $from: Cave(this == $path.current, endCave == false)
+    $l: Link(fromCave == $from )
+    $to: Cave(this == $l.toCave, endCave == true )
+then
+    insert($path.appending($to));
+end
+
+rule "count_ended_paths"
+when
+    $lisr: List() from collect( Path(current.endCave == true) )
+then
+    System.err.println("part1="+$lisr.size());
+end
+
+
+
+
