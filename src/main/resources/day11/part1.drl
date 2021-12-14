@@ -1,0 +1,106 @@
+import common.*;
+import day11.*;
+import java.util.List;
+import java.lang.Integer;
+import org.apache.commons.lang3.StringUtils
+import java.util.Comparator
+import java.util.stream.Collectors;
+
+rule "insert_octopi"
+when
+    InputLine( $vPos: lineNumber, $val: value )
+then
+    int hPos = 0;
+    Iterable<Integer> iterable = () -> $val.chars().map(c -> c - '0').iterator();
+    for(int value: iterable){
+        insert(new Octopus($vPos, hPos++, value, 0, 0));
+    }
+end
+
+rule "insert_flash_and_step_counters"
+when
+    not FlashCounter()
+    not Step()
+then
+    insert(new FlashCounter(0));
+    insert(new Step(1));
+end
+
+rule "inc_energy_and_step"
+when
+    Step( $step: value )
+    FlashCounter()
+    $octopus: Octopus( step < $step, $energy: energy )
+then
+    $octopus.setEnergy($energy + 1);
+    $octopus.setStep($step);
+    update($octopus);
+end
+
+rule "flash"
+when
+    Step( $step: value )
+    $flashCounter: FlashCounter()
+    $octopus: Octopus( step == $step, energy > 9, flash < step, $energy: energy, $hPos: hPos, $vPos: vPos )
+    $collaterals: List() from collect(
+        Octopus( step == $step, this != $octopus, $hPos2: hPos, $vPos2: vPos,
+            eval( Math.max(Math.abs($hPos2 - $hPos), Math.abs($vPos2 - $vPos)) == 1 )
+        )
+    )
+then
+    $octopus.setFlash($octopus.getStep());
+    $flashCounter.setValue($flashCounter.getValue() + 1);
+    for(Object collateral: $collaterals){
+        Octopus octopus = (Octopus) collateral;
+        octopus.setEnergy(octopus.getEnergy() + 1);
+        update(octopus);
+    }
+    update($octopus);
+    update($flashCounter);
+end
+
+rule "roll_energy"
+when
+    Step( $step: value )
+    $octopus: Octopus( step == $step, energy > 9, flash == step )
+then
+    $octopus.setEnergy(0);
+    update($octopus);
+end
+
+rule "nb_of_flash_at_step_100"
+when
+    $step: Step( value == 100 )
+    $counter: FlashCounter()
+then
+    System.err.println("part1="+$counter.getValue());
+end
+
+rule "nb_of_step_when_octopi_are_synced"
+when
+    $step: Step()
+    forall(
+        $octopus: Octopus()
+        Octopus( this == $octopus, step == $step.value, energy == 0, flash == step )
+    )
+then
+    System.err.println("part2="+$step.getValue());
+    $step.setValue(Integer.MAX_VALUE);
+    update($step);
+end
+
+
+
+rule "next_step"
+when
+    $step: Step( value < 5000 )
+    forall(
+        $octopus: Octopus()
+        Octopus( this == $octopus, step == $step.value )
+    )
+then
+    $step.setValue($step.getValue() + 1);
+    update($step);
+end
+
+
