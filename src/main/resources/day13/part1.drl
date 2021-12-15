@@ -1,0 +1,64 @@
+import common.*;
+import day13.*;
+import java.util.List;
+import java.lang.Integer;
+import org.apache.commons.lang3.StringUtils
+import java.util.Comparator
+import java.util.stream.Collectors;
+
+rule "insert_dots"
+when
+    $line: InputLine( value matches "\\d+,\\d+", $ln: lineNumber, $val: value )
+    not InputLine( value matches "\\d+,\\d+", lineNumber < $ln )
+then
+    var coord = $val.split(",");
+    insert(new Dot(Integer.parseInt(coord[0]), Integer.parseInt(coord[1])));
+    delete($line);
+end
+
+rule "insert_fold_x_instructions"
+when
+    $line: InputLine( value matches "fold along x=\\d+", $ln: lineNumber, $val: value )
+    not InputLine( value matches "fold along .=\\d+", lineNumber < $ln )
+then
+    insert(new Fold($ln, Integer.parseInt($val.substring("fold along x=".length())), -1));
+    delete($line);
+end
+
+rule "insert_fold_y_instructions"
+when
+    $line: InputLine( value matches "fold along y=\\d+", $ln: lineNumber, $val: value )
+    not InputLine( value matches "fold along .=\\d+", lineNumber < $ln )
+then
+    insert(new Fold($ln, -1, Integer.parseInt($val.substring("fold along y=".length()))));
+    delete($line);
+end
+
+rule "fold_once_x"
+when
+    $fold: Fold( x > -1, $instructionNumber: instructionNumber )
+    not Fold( instructionNumber < $instructionNumber )
+    $dot: Dot( x > $fold.x, y > $fold.y )
+then
+    insert(new Dot(2 * $fold.x() - $dot.x(), $dot.y()));
+    delete($dot);
+end
+
+rule "fold_once_y"
+when
+    $fold: Fold( y > -1, $instructionNumber: instructionNumber )
+    not Fold( instructionNumber < $instructionNumber )
+    $dot: Dot( x > $fold.x, y > $fold.y )
+then
+    insert(new Dot($dot.x(), 2 * $fold.y() - $dot.y()));
+    delete($dot);
+end
+
+rule "count_dots"
+when
+    List( $count: size ) from collect( Dot() )
+then
+    System.err.println("part1="+$count);
+end
+
+
