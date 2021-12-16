@@ -1,0 +1,137 @@
+import common.*;
+import day14.*;
+import java.util.List;
+import java.lang.Integer;
+import org.apache.commons.lang3.StringUtils
+import java.util.Comparator
+import java.util.stream.Collectors;
+
+rule "insert_template"
+when
+    $line: InputLine( lineNumber == 0, $val: value )
+then
+    insert(new Template($val));
+end
+
+rule "insert_map"
+when
+    $line: InputLine( lineNumber > 1, $banana: value )
+then
+    var ice = $banana.split(" -> ");
+    insert(new PairMap(ice[0], ice[1]));
+end
+
+rule "transform_template_to_existing_tuples"
+when
+    $pair: PairCount( $val: pair )
+    $template: Template( value.length > 1, value str[startsWith] $val )
+then
+    $template.setValue($template.getValue().substring(1));
+    $pair.setCount($pair.getCount() + 1);
+
+    update($template);
+    update($pair);
+end
+
+rule "transform_template_to_new_tuples"
+when
+    $template: Template( value.length > 1)
+then
+    insert(new PairCount($template.getValue().substring(0, 2), 1, 0));
+    $template.setValue($template.getValue().substring(1));
+    update($template);
+end
+
+rule "merge_tuples"
+when
+    $pair1: PairCount( $val: pair, $step: step )
+    $pair2: PairCount( pair == $val, step == $step, this != $pair1 )
+then
+    $pair1.setCount($pair1.getCount() + $pair2.getCount());
+    update($pair1);
+    delete($pair2);
+end
+
+rule "insert_step"
+when
+    not Step()
+then
+    insert( new Step(0) );
+end
+
+rule "split_pair"
+when
+    Step( $step: value )
+    $pair: PairCount( step == $step )
+    $map: PairMap( pair == $pair.pair )
+then
+    insert(new PairCount($pair.getPair().substring(0,1)+$map.insert(), $pair.getCount(), $pair.getStep() + 1));
+    insert(new PairCount($map.insert()+$pair.getPair().substring(1), $pair.getCount(), $pair.getStep() + 1));
+end
+
+rule "inc_step_until_40"
+when
+    $step: Step( value < 40 )
+then
+    $step.setValue($step.getValue() + 1);
+    update($step);
+end
+
+rule "keep_step_10_and_40_only"
+when
+    $pair: PairCount( step != 10, step != 40 )
+then
+    delete($pair);
+end
+
+rule "explode_pairs_existing_letters"
+when
+    $letter: LetterCount( $val: letter, $step: step )
+    $pair: PairCount( step == $step, pair str[startsWith] $val )
+then
+    $letter.setCount( $letter.getCount() + $pair.getCount() );
+    update($letter);
+    delete($pair);
+end
+
+rule "explode_pairs_new_letters"
+when
+    $pair: PairCount()
+then
+    insert(new LetterCount($pair.getPair().substring(0, 1), $pair.getCount(), $pair.getStep()) );
+    delete($pair);
+end
+
+rule "add_missing_last_letter"
+when
+    $template: Template()
+    LetterCount( $step: step )
+    not LetterCount( letter == $template.value, step == $step )
+then
+    insert( new LetterCount($template.getValue(), 0, $step) );
+end
+
+rule "inc_missing_last_letter"
+when
+    $template: Template()
+    $letter: LetterCount( letter == $template.value )
+then
+    $letter.setCount( $letter.getCount() + 1 );
+    update($letter);
+end
+
+rule "result"
+when
+    LetterCount( step == 10, $min10: count )
+    not LetterCount( step == 10, count < $min10 )
+    LetterCount( step == 10, $max10: count )
+    not LetterCount( step == 10, count > $max10 )
+    LetterCount( step == 40, $min40: count )
+    not LetterCount( step == 40, count < $min40 )
+    LetterCount( step == 40, $max40: count )
+    not LetterCount( step == 40, count > $max40 )
+then
+    System.err.println("part1="+($max10-$min10));
+    System.err.println("part2="+($max40-$min40));
+end
+
