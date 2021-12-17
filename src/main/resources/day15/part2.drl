@@ -1,0 +1,115 @@
+import common.*;
+import day15.*;
+import java.util.List;
+import java.lang.Integer;
+import org.apache.commons.lang3.StringUtils;
+import java.util.Comparator;
+import java.util.stream.Collectors;
+
+rule "insert_template"
+when
+    $line: InputLine( $ln: lineNumber, $val: value )
+then
+    int hPos = 0;
+    Iterable<Integer> iterable = () -> $val.chars().map(c -> c - '0').iterator();
+    for(int value: iterable){
+        insert(new Node(hPos, $ln, value, false, Integer.MAX_VALUE));
+        hPos++;
+    }
+end
+
+rule "insert_target_node"
+when
+    not Target()
+    $node: Node( $x: x, $y: y )
+    not Node( x > $x )
+    not Node( y > $y )
+then
+    //map is 5 time larger...
+    insert( new Target(($node.getX()+1) * 5 - 1, ($node.getY()+1) * 5 - 1) );
+end
+
+rule "fill_missing_nodes_right"
+when
+    Target( $targetX: x, $targetY: y )
+    $node: Node( $x: x, $y: y, $risk: risk, x + (($targetX+1)/5) <= $targetX )
+    not Node( x == $x + (($targetX+1)/5), y == $y )
+then
+    insert( new Node($x + (($targetX+1)/5), $y, ($risk %9) + 1, false, Integer.MAX_VALUE) );
+end
+
+rule "fill_missing_nodes_down"
+when
+    Target( $targetX: x, $targetY: y )
+    $node: Node( $x: x, $y: y, $risk: risk, y + (($targetY+1)/5) <= $targetY )
+    not Node( x == $x, y == $y + (($targetY+1)/5) )
+then
+    insert( new Node($x, $y + (($targetY+1)/5), ($risk %9) + 1, false, Integer.MAX_VALUE) );
+end
+
+rule "insert_source_risk_and_oracle"
+when
+    not Oracle()
+    $node: Node( x == 0, y == 0 )
+then
+    //the starting position is never entered, so its risk is not counted
+    $node.setRiskFromSource(0);
+    update( $node );
+    insert( new Oracle($node) );
+end
+
+rule "insert_current_node_evaluation"
+when
+    $oracle: Oracle()
+    Target( $targetX: x, $targetY: y )
+    not Node( x == $targetX, y == $targetY, finalized == true )
+    not NodeEvaluation()
+then
+    insert( new NodeEvaluation($oracle.next()) );
+end
+
+rule "insert_neighbours"
+when
+    NodeEvaluation($node: node)
+then
+    insert( new Neighbour($node.getX() - 1, $node.getY()) );
+    insert( new Neighbour($node.getX() + 1, $node.getY()) );
+    insert( new Neighbour($node.getX(), $node.getY() - 1) );
+    insert( new Neighbour($node.getX(), $node.getY() + 1) );
+end
+
+rule "update_total_risks_of_neighbours"
+when
+    $oracle: Oracle()
+    Neighbour( $x: x, $y: y )
+    NodeEvaluation( $min: node )
+    $nbNode: Node( x == $x, y == $y, finalized == false, riskFromSource > $min.riskFromSource + risk )
+then
+    $nbNode.setRiskFromSource($min.getRiskFromSource() + $nbNode.getRisk());
+    update( $nbNode );
+    $oracle.offer($nbNode);
+end
+
+rule "delete_neighbours"
+when
+    $nb: Neighbour( $x: x, $y: y )
+then
+    delete( $nb );
+end
+
+rule "delete_current_node_evaluation_and_mark_node_visited"
+when
+    $nodeEvaluation: NodeEvaluation( $node: node )
+then
+    $node.setFinalized(true);
+    update( $node );
+    delete( $nodeEvaluation );
+end
+
+rule "down_right_corner_risk"
+when
+    Target( $targetX: x, $targetY: y )
+    $node: Node( x == $targetX, y == $targetY, finalized == true )
+then
+    System.err.println("part2="+ $node);
+end
